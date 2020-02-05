@@ -30,7 +30,7 @@ public class NetworkZonePortal : MonoBehaviour
 			// TODO: Add validation if the zone we are trying to transfer to is valid/online
 
             // immediately save new scene index and position
-            print("[Zones]: saving player(" + player.name + ") scene index(" + scenePath + ")");
+            print("[Zones]: saving player(" + player.name + ") scene path (" + scenePath + ")");
             player.transform.position = position;
             Database.singleton.CharacterSave(player, false);
             Database.singleton.SaveCharacterScenePath(player.name, scenePath);

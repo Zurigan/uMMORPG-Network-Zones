@@ -120,28 +120,32 @@ public class NetworkZone : MonoBehaviour
         string scenePath = ParseScenePathFromArgs();
         if (!string.IsNullOrEmpty(scenePath))
         {
-            // set network port to port + index
-            // note: NetworkManager.singleton is still null in awake
-            int sceneIndex = SceneUtility.GetBuildIndexByScenePath(scenePath);
-			var newPort = (ushort)(originalPort + sceneIndex);
-			print("[Zones] setting requested port: " + newPort);
-			SetPort(newPort);
-
-			// convert scene path to scene name
-			string sceneName = Path.GetFileNameWithoutExtension(scenePath);
-
-            print("[Zones] changing server scene: " + sceneName);
-
-			// TODO investigate if this should be refactored to async load this scene
-			// given the authors warns at the top of this file
-            manager.onlineScene = sceneName; // loads scene automatically
-
-            manager.StartServer();
+	        // set network port to port + index, this new port will be used in NetworkServer.Start()  
+	        var sceneIndex = SceneUtility.GetBuildIndexByScenePath(scenePath);
+	        var newPort = (ushort)(originalPort + sceneIndex);
+	        print("[Zones] setting zone port: " + newPort + " for scene: "+Path.GetFileNameWithoutExtension(scenePath));
+	        SetPort(newPort);
+	        
+	        StartCoroutine(WaitOnServerReady(scenePath));
         }
-		else
-		{
-			SetPort(originalPort);
-		}
+    }
+    
+    private IEnumerator WaitOnServerReady(string scenePath)
+    {
+	    const int waitInterval = 1;
+
+	    while (!manager.isNetworkActive)
+	    {
+		    print("[Zones] waiting on manager.isNetworkActive");
+		    yield return waitInterval;
+	    }
+	    
+	    // convert scene path to scene name
+	    var sceneName = Path.GetFileNameWithoutExtension(scenePath);
+
+	    print("[Zones] switching zone server scene to: " + sceneName);
+
+	    manager.ServerChangeScene(sceneName);
     }
 
 	private void OnDestroy()
@@ -192,7 +196,7 @@ public class NetworkZone : MonoBehaviour
 				continue;
 			}
 
-            // is not this scene?
+            // only spawn new processes for scenes that aren't this one
             string sceneName = Path.GetFileNameWithoutExtension(scenePath);
             if (sceneName != SceneManager.GetActiveScene().name)
 			{
@@ -246,9 +250,11 @@ public class NetworkZone : MonoBehaviour
 			return;
 		}
 
+		var sceneName = Path.GetFileNameWithoutExtension(message.scenePath);
+		
 		// TODO: add validation for message contents
 
-		print("OnClientSwitchServerRequested: " + message.scenePath);
+		print("[Zones]: OnClientSwitchServerRequested: " + sceneName);
         print("[Zones]: disconnecting from current server");
         manager.StopClient();
 
@@ -262,13 +268,11 @@ public class NetworkZone : MonoBehaviour
 			
         Transport.activeTransport.enabled = false; // don't receive while switching scenes
 
-        print("[Zones]: loading required scene: " + message.scenePath);
+        print("[Zones]: loading required scene: " + sceneName);
         autoSelectCharacter = message.characterName;
 
         // load requested scene and make sure to auto connect when it's done
-        string sceneName = Path.GetFileNameWithoutExtension(message.scenePath);
-
-		// TODO: Change to Async with loading screen
+        // TODO: Change to Async with loading screen
 		SceneManager.LoadScene(sceneName);
 
         autoConnectClient = true;
