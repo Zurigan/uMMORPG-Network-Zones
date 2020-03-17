@@ -53,7 +53,7 @@ As far I know this was originally created by vis2k, credit to Puppet from the uM
 			ClientScene.AddPlayer(NetworkClient.connection, extra);
 
 			// send CharacterSelect message (need to be ready first!)
-			NetworkClient.connection.Send(new CharacterSelectMsg(index));
+			NetworkClient.connection.Send(new CharacterSelectMsg{index = index});
 
 			return;
 		}
